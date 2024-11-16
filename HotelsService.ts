@@ -70,6 +70,7 @@ export default class HotelsService {
 
         for (let i = 0; i < hotel_ids.length; i++){
             for (const hotel of this.merged_hotels){
+                // Only return hotel that matchs both id and destinationId 
                 if (hotel.id === hotel_ids[i] && hotel.destinationId.toString() === destination_ids[i]){
                     filtered_hotels.push(hotel)
                 }
