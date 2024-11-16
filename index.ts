@@ -32,10 +32,10 @@ async function main() {
     const args = process.argv.slice(2);
     if (args.length !== 2) {
         console.log('Error: Invalid number of arguments');
-        console.log('Usage: ts-node index.ts <hotel_ids> <destination_ids>');
-        console.log('Example: ts-node hotel_id_1,hotel_id_2,hotel_id_3 destination_id_1,destination_id_2');
-        console.log('Example: ts-node hotel_id_4,hotel_id_5 none');
-        console.log('Example: ts-node none destination_id_3');
+        console.log('Usage: npx ts-node index.ts <hotel_ids> <destination_ids>');
+        console.log('Example: npx ts-node hotel_id_1,hotel_id_2,hotel_id_3 destination_id_1,destination_id_2');
+        console.log('Example: npx ts-node hotel_id_4,hotel_id_5 none');
+        console.log('Example: npx ts-node none destination_id_3');
         process.exit(1); 
     }
 
