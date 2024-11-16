@@ -1,5 +1,13 @@
 import { HotelDTO, HotelImage, Location, Amenities, HotelImages } from "./DTOs/HotelDTO";
 
+// This interface to make a map that store frequency and value of a key to help choose the best data
+interface FrequencyMap<T> {
+    [key: string]: {
+        value: T;
+        count: number;
+    };
+}
+
 export default class HotelsService {
 
     mergedHotels: HotelDTO[];
@@ -48,10 +56,10 @@ export default class HotelsService {
     }
 
     private mergeHotelData(existing: HotelDTO, newHotel: HotelDTO): void {
-        // Merge name (I choose to take the name that has the longest length)
-        existing.name = this.selectLongerText(existing.name, newHotel.name) ?? existing.name;
-
-        existing.location = this.mergeLocation(existing.location, newHotel.location);
+        // Merge name and location
+        const {mergedName, mergedLoc} = this.mergeNameAndLocation(existing.name, existing.location, newHotel.name, newHotel.location);
+        existing.name = mergedName;
+        existing.location = mergedLoc;
 
         // Merge description (I choose to take the description that has the longest length)
         existing.description = this.selectLongerText(existing.description, newHotel.description);
@@ -59,23 +67,83 @@ export default class HotelsService {
         existing.amenities = this.mergeAmenities(existing.amenities, newHotel.amenities);
 
         existing.images = this.mergeAllImages(existing.images, newHotel.images);
-        
+
         existing.bookingConditions = this.mergeBookingConditions(
             existing.bookingConditions, 
             newHotel.bookingConditions
         );
     }
 
-     // Merge location (take non-null value)
-    private mergeLocation(existing: Location, newLoc: Location): Location {
-        return {
-            lat: existing.lat || newLoc.lat,
-            lng: existing.lng || newLoc.lng,
-            address: existing.address || newLoc.address,
-            city: existing.city || newLoc.city,
-            // I choose full name of country rather than country code (Singapore over SG)
-            country: this.selectLongerText(existing.country, newLoc.country),
+    // Merge name and location (use frequency map)
+    private mergeNameAndLocation(existingName: string, existingLoc: Location, newName: string, newLoc: Location): {mergedName :string, mergedLoc: Location} {
+        // Create frequency maps for each field
+        // I choose to do this way as the number of suppliers grow,
+        // I think we should choose the value that has the most occurrences (frequency)
+        // And for string if two or more values have the same frequency, I pick the longer one (Ex: for name of location)
+        // Ex: "1 Nanson Rd, Singapore 238909" and "1 Nanson Road" both occur 1 time but "1 Nanson Rd, Singapore 238909" is longer (and have more information)
+        // For float (latitude and longtitude), if two or more values have the same frequency, I pick the first one but we can just pick any value.
+        const nameFreq = this.createFrequencyMap([existingName, newName]);
+        const latFreq = this.createFrequencyMap([existingLoc.lat, newLoc.lat]);
+        const lngFreq = this.createFrequencyMap([existingLoc.lng, newLoc.lng]);
+        const addressFreq = this.createFrequencyMap([existingLoc.address, newLoc.address]);
+        const cityFreq = this.createFrequencyMap([existingLoc.city, newLoc.city]);
+        const countryFreq = this.createFrequencyMap([existingLoc.country, newLoc.country]);
+
+        const mergedLoc : Location = {
+            lat: this.selectByFrequencyNumeric(latFreq),
+            lng: this.selectByFrequencyNumeric(lngFreq),
+            address: this.selectByFrequencyString(addressFreq),
+            city: this.selectByFrequencyString(cityFreq),
+            country: this.selectByFrequencyString(countryFreq),
         };
+
+        return {mergedName : this.selectByFrequencyString(nameFreq) ?? existingName, mergedLoc: mergedLoc}
+    }
+
+    private createFrequencyMap<T>(values: (T | null)[]): FrequencyMap<T> {
+        const frequencyMap: FrequencyMap<T> = {};
+        // Create a map, each key has: value and the number of occurrences (frequency) 
+        values.forEach(value => {
+            if (value != null) {
+                const key = String(value);
+                if (!frequencyMap[key]) {
+                    frequencyMap[key] = { value, count: 0 };
+                }
+                frequencyMap[key].count++;
+            }
+        });
+        
+        return frequencyMap;
+    }
+
+    private selectByFrequencyString(freqMap: FrequencyMap<string>): string | null {
+        const entries = Object.values(freqMap);
+        if (entries.length === 0) return null;
+        
+        // Sort by frequency (descending) and then by length (descending)
+        entries.sort((a, b) => {
+            if (a.count !== b.count) {
+                return b.count - a.count;
+            }
+            return b.value.length - a.value.length;
+        });
+        
+        return entries[0].value;
+    }
+
+    private selectByFrequencyNumeric(freqMap: FrequencyMap<number>): number | null {
+        const entries = Object.values(freqMap);
+        if (entries.length === 0) return null;
+        
+        // Sort by frequency (descending) and take first value if frequencies are equal
+        entries.sort((a, b) => {
+            if (a.count !== b.count) {
+                return b.count - a.count;
+            }
+            return 0; // Keep original order for equal frequencies
+        });
+        
+        return entries[0].value;
     }
 
     // Merge amenities (combine general and room and remove any duplicate)

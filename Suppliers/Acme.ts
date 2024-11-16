@@ -16,8 +16,8 @@ class Acme implements BaseSupplier {
             const lat = typeof acmeDTO.Latitude === "number" ? acmeDTO.Latitude : null;
             const lng = typeof acmeDTO.Longitude === "number" ? acmeDTO.Longitude : null;
 
-            // Combine address and postal code for the full location address
-            const locationAddress = `${acmeDTO.Address.trim()}, ${acmeDTO.PostalCode}`;
+            // Sanitize address
+            const locationAddress = acmeDTO.Address.trim();
 
             const location: Location = {
                 lat: lat,
