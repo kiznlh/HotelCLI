@@ -48,11 +48,18 @@ export default class HotelsService {
     }
 
     private mergeHotelData(existing: HotelDTO, newHotel: HotelDTO): void {
+        // Merge name (I choose to take the name that has the longest length)
+        existing.name = this.selectLongerText(existing.name, newHotel.name) ?? existing.name;
+
         existing.location = this.mergeLocation(existing.location, newHotel.location);
+
         // Merge description (I choose to take the description that has the longest length)
         existing.description = this.selectLongerText(existing.description, newHotel.description);
+
         existing.amenities = this.mergeAmenities(existing.amenities, newHotel.amenities);
+
         existing.images = this.mergeAllImages(existing.images, newHotel.images);
+        
         existing.bookingConditions = this.mergeBookingConditions(
             existing.bookingConditions, 
             newHotel.bookingConditions
